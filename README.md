@@ -58,6 +58,23 @@ python3 speedo.py -S 300
 ```
 python3 speedo.py -r 20
 ```
+## AI Health Score (Formula (0–100 score))
+	•	Ping penalty: min(ping/2, 30) → high ping reduces score up to 30 points
+	•	Jitter penalty: min(jitter/2, 20) → unstable network reduces up to 20 points
+	•	Download weight: (download / 100) * 30 → fast download adds up to 30 points
+	•	Upload weight: (upload / 100) * 20 → fast upload adds up to 20 points
+
+Score capped between 0 and 100.
+
+#### Categories:
+
+- 80–100: Excellent
+- 60–79: Good
+- 40–59: Fair
+-	20–39: Poor
+-	0–19: Critical
+
+- Score = 100 - (Ping penalty) - (Jitter penalty) + (Download weight) + (Upload weight)
 
 ## License
 This project is licensed under the Custom Dr.Pinnacle License — see LICENSE for details.
