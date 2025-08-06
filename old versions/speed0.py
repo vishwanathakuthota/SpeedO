@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-SpeedO v2.2 - Internet Speed & Stress Test Tool
-Features: CSV Logging + ASCII Speedometer + AI Health Score Gradient Bar
+SpeedO v2.1 - Internet Speed & Stress Test Tool
+Features: CSV Logging + ASCII Speedometer + AI Health Score
 By Dr.Pinnacle (Vishwanath Akuthota © 2025)
 """
 
@@ -95,24 +95,6 @@ def calculate_health_score(download, upload, ping, jitter):
 
     score = 100 - ping_penalty - jitter_penalty + download_score + upload_score
     return max(0, min(100, round(score, 1)))
-
-# Gradient AI Health bar
-def render_health_bar(score, width=20):
-    if score >= 80:
-        color = Fore.GREEN
-    elif score >= 60:
-        color = Fore.YELLOW
-    elif score >= 40:
-        color = Fore.MAGENTA
-    elif score >= 20:
-        color = Fore.RED
-    else:
-        color = Fore.LIGHTRED_EX
-
-    filled = int((score / 100) * width)
-    bar = "█" * filled + "-" * (width - filled)
-
-    return f"AI Health |{color}{bar}{Style.RESET_ALL}| {score}/100"
 
 # Run speedtest-cli via subprocess
 def run_speedtest_cli():
@@ -224,7 +206,7 @@ def stress_test(duration, test_type="ALL", ping_samples=5, timeout=5000):
         max_dl = max(downloads) if downloads else 100
         max_ul = max(uploads) if uploads else 100
 
-        # Move cursor up 6 lines after first iteration (avoid flicker)
+        # Move cursor up 5 lines after first iteration (avoid flicker)
         if iteration > 1:
             sys.stdout.write("\033[F" * 6)
 
@@ -233,7 +215,7 @@ def stress_test(duration, test_type="ALL", ping_samples=5, timeout=5000):
         print(Fore.CYAN + render_ascii_bar("Download", result.get("download", 0), max_dl))
         print(Fore.CYAN + render_ascii_bar("Upload", result.get("upload", 0), max_ul))
         print(Fore.CYAN + f"Ping: {result.get('ping', 'N/A')} ms | Jitter: {result.get('jitter', 'N/A')} ms")
-        print(render_health_bar(score) + "\n")
+        print(Fore.MAGENTA + f"AI Health Score: {score}/100\n")
 
         iteration += 1
         time.sleep(2)  # Cooldown
@@ -264,12 +246,12 @@ def stress_test(duration, test_type="ALL", ping_samples=5, timeout=5000):
         "Critical"
     )
 
-    print("\n" + render_health_bar(final_score) + f" ({status})")
+    print(Fore.MAGENTA + f"\nOverall AI Health Score: {final_score}/100 ({status})")
     print(Fore.MAGENTA + f"\nResults logged to: {log_file}")
 
 # Parse CLI arguments
 def parse_args():
-    parser = argparse.ArgumentParser(description="SpeedO v2.2 - Internet Speed & Stress Test Tool")
+    parser = argparse.ArgumentParser(description="SpeedO v2.1 - Internet Speed & Stress Test Tool")
     parser.add_argument("-S", "--stress", help="Stress mode (L/M/H/V/E/D/Y) or seconds", default=None)
     parser.add_argument("-T", "--test", help="Specific test: U (upload), D (download), P (ping)", default="ALL")
     parser.add_argument("-r", "--run", type=int, help="Auto-start after delay in seconds", default=0)
@@ -319,7 +301,7 @@ def main():
         print(Fore.CYAN + f"Upload:   {result.get('upload', 'N/A')} Mbps")
         print(Fore.CYAN + f"Ping:     {result.get('ping', 'N/A')} ms")
         print(Fore.CYAN + f"Jitter:   {result.get('jitter', 'N/A')} ms")
-        print(render_health_bar(score))
+        print(Fore.MAGENTA + f"AI Health Score: {score}/100")
 
 if __name__ == "__main__":
     main()
