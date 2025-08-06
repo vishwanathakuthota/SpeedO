@@ -37,6 +37,30 @@ pip install speedtest-cli
 |   -P, --ping     |   Number of ping samples                         |   -P 100          |
 |   -O, --timeout  |   Ping timeout in milliseconds                   |   -O 6000         |
 
+## Usage
+
+### Full speed test
+```
+python3 speedo.py
+```
+### Run upload only
+```
+python3 speedo.py -T U
+```
+### Stress test for 10 minutes
+```
+python3 speedo.py -S M
+```
+### Custom stress test (300 seconds)
+```
+python3 speedo.py -S 300
+```
+
+### Auto-start test after 20 seconds
+```
+python3 speedo.py -r 20
+```
+
 ## License
 This project is licensed under the Custom Dr.Pinnacle License — see LICENSE for details.
 
