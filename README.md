@@ -1,5 +1,4 @@
 # SpeedO
-SpeedO - Terminal Internet Speed & Stress Test Tool
 
 **SpeedO** is a terminal-based Internet Speed & Stress Testing tool  
 developed by **Dr.Pinnacle (Vishwanath Akuthota © 2025)**.
