@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-SpeedO v2.3 - Internet Speed & Stress Test Tool
-Features: CSV Logging + ASCII Speedometer + AI Health Score Gradient Bar + Latency
+SpeedO v2.2 - Internet Speed & Stress Test Tool
+Features: CSV Logging + ASCII Speedometer + AI Health Score Gradient Bar
 By Dr.Pinnacle (Vishwanath Akuthota © 2025)
 """
 
@@ -44,6 +44,7 @@ _\ \ |_) |  __/  __/ (_| / \_//
         SpeedO by Dr.Pinnacle (Vishwanath Akuthota ©)
 """
 
+# Stress durations
 STRESS_MODES = {
     'L': 300,
     'M': 600,
@@ -67,10 +68,7 @@ def init_log_file():
     filename = datetime.now().strftime("logs/speedo_%Y-%m-%d_%H-%M-%S.csv")
     with open(filename, "w", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow([
-            "timestamp", "download_mbps", "upload_mbps",
-            "ping_ms", "jitter_ms", "latency_ms", "ai_health_score"
-        ])
+        writer.writerow(["timestamp", "download_mbps", "upload_mbps", "ping_ms", "jitter_ms", "ai_health_score"])
     return filename
 
 def log_to_csv(filename, result, score):
@@ -82,23 +80,20 @@ def log_to_csv(filename, result, score):
             result.get("upload", "N/A"),
             result.get("ping", "N/A"),
             result.get("jitter", "N/A"),
-            result.get("latency", "N/A"),
             score
         ])
 
 # AI Health Score calculation
-def calculate_health_score(download, upload, ping, jitter, latency):
-    if download == "N/A" or upload == "N/A" or ping == "N/A" or jitter == "N/A" or latency == "N/A":
+def calculate_health_score(download, upload, ping, jitter):
+    if download == "N/A" or upload == "N/A" or ping == "N/A" or jitter == "N/A":
         return 0
 
-    ping_penalty = min(ping / 2, 20)
-    jitter_penalty = min(jitter / 2, 15)
-    latency_penalty = min(latency / 2, 15)
-
+    ping_penalty = min(ping / 2, 30)
+    jitter_penalty = min(jitter / 2, 20)
     download_score = min((download / 100) * 30, 30)
     upload_score = min((upload / 100) * 20, 20)
 
-    score = 100 - ping_penalty - jitter_penalty - latency_penalty + download_score + upload_score
+    score = 100 - ping_penalty - jitter_penalty + download_score + upload_score
     return max(0, min(100, round(score, 1)))
 
 # Gradient AI Health bar
@@ -137,8 +132,7 @@ def run_speedtest_cli():
         return {
             "download": round(data["download"] / 1_000_000, 2),
             "upload": round(data["upload"] / 1_000_000, 2),
-            "ping": round(data["ping"], 2),
-            "latency": round(data.get("server", {}).get("latency", data["ping"]), 2)  # fallback
+            "ping": round(data["ping"], 2)
         }
 
     except FileNotFoundError:
@@ -166,13 +160,13 @@ def render_ascii_bar(label, value, max_value, width=20):
         filled = int((value / max_value) * width)
         filled = min(filled, width)
         bar = "█" * filled + "-" * (width - filled)
-    return f"{label:<9} |{bar}| {value}"
+    return f"{label:<9} |{bar}| {value} Mbps"
 
-# Combined test (Download, Upload, Ping, Jitter, Latency)
+# Combined test (Download, Upload, Ping, Jitter)
 def run_speed_test(test_type="ALL", ping_samples=5, timeout=5000):
     result = {}
 
-    # Run speedtest-cli for download/upload/ping/latency
+    # Run speedtest-cli for download/upload/ping
     if test_type in ["ALL", "D", "U", "P"]:
         cli_result = run_speedtest_cli()
         if not cli_result:
@@ -184,7 +178,6 @@ def run_speed_test(test_type="ALL", ping_samples=5, timeout=5000):
             result["upload"] = cli_result["upload"]
         if test_type in ["ALL", "P"]:
             result["ping"] = cli_result["ping"]
-            result["latency"] = cli_result["latency"]
 
     # Add jitter calculation
     if test_type in ["ALL", "P"]:
@@ -199,8 +192,8 @@ def stress_test(duration, test_type="ALL", ping_samples=5, timeout=5000):
     end_time = time.time() + duration
     iteration = 1
 
-    # Track stats
-    downloads, uploads, pings, jitters, latencies = [], [], [], [], []
+    # Track stats for summary
+    downloads, uploads, pings, jitters = [], [], [], []
 
     # Init CSV log
     log_file = init_log_file()
@@ -210,11 +203,11 @@ def stress_test(duration, test_type="ALL", ping_samples=5, timeout=5000):
     while time.time() < end_time:
         result = run_speed_test(test_type, ping_samples, timeout)
 
+        # Track results
         if "download" in result: downloads.append(result["download"])
         if "upload" in result: uploads.append(result["upload"])
         if "ping" in result: pings.append(result["ping"])
         if "jitter" in result: jitters.append(result["jitter"])
-        if "latency" in result: latencies.append(result["latency"])
 
         # Calculate AI Health Score
         score = calculate_health_score(
@@ -222,26 +215,28 @@ def stress_test(duration, test_type="ALL", ping_samples=5, timeout=5000):
             result.get("upload", 0),
             result.get("ping", 0),
             result.get("jitter", 0),
-            result.get("latency", 0),
         )
 
         # Log to CSV
         log_to_csv(log_file, result, score)
 
+        # Determine scaling (max observed so far for bars)
         max_dl = max(downloads) if downloads else 100
         max_ul = max(uploads) if uploads else 100
 
+        # Move cursor up 6 lines after first iteration (avoid flicker)
         if iteration > 1:
-            sys.stdout.write("\033[F" * 7)
+            sys.stdout.write("\033[F" * 6)
 
+        # Render ASCII bars inline
         print(Fore.GREEN + f"--- Iteration {iteration} --- ({datetime.now().strftime('%H:%M:%S')})")
-        print(Fore.CYAN + render_ascii_bar("Download", result.get("download", "N/A"), max_dl))
-        print(Fore.CYAN + render_ascii_bar("Upload", result.get("upload", "N/A"), max_ul))
-        print(Fore.CYAN + f"Ping: {result.get('ping', 'N/A')} ms | Jitter: {result.get('jitter', 'N/A')} ms | Latency: {result.get('latency', 'N/A')} ms")
+        print(Fore.CYAN + render_ascii_bar("Download", result.get("download", 0), max_dl))
+        print(Fore.CYAN + render_ascii_bar("Upload", result.get("upload", 0), max_ul))
+        print(Fore.CYAN + f"Ping: {result.get('ping', 'N/A')} ms | Jitter: {result.get('jitter', 'N/A')} ms")
         print(render_health_bar(score) + "\n")
 
         iteration += 1
-        time.sleep(2)
+        time.sleep(2)  # Cooldown
 
     # Summary
     print(Fore.YELLOW + "\n=== Stress Test Summary ===")
@@ -250,19 +245,17 @@ def stress_test(duration, test_type="ALL", ping_samples=5, timeout=5000):
     if uploads:
         print(f"Upload:   avg {statistics.mean(uploads):.2f} Mbps, min {min(uploads)} Mbps, max {max(uploads)} Mbps")
     if pings:
-        print(f"Ping:     avg {statistics.mean(pings):.2f} ms")
+        print(f"Ping:     avg {statistics.mean(pings):.2f} ms, min {min(pings)} ms, max {max(pings)} ms")
     if jitters:
-        print(f"Jitter:   avg {statistics.mean(jitters):.2f} ms")
-    if latencies:
-        print(f"Latency:  avg {statistics.mean(latencies):.2f} ms")
+        print(f"Jitter:   avg {statistics.mean(jitters):.2f} ms, min {min(jitters)} ms, max {max(jitters)} ms")
 
-    final_score = calculate_health_score(
-        statistics.mean(downloads) if downloads else 0,
-        statistics.mean(uploads) if uploads else 0,
-        statistics.mean(pings) if pings else 0,
-        statistics.mean(jitters) if jitters else 0,
-        statistics.mean(latencies) if latencies else 0,
-    )
+    # AI Health Score Summary
+    avg_dl = statistics.mean(downloads) if downloads else 0
+    avg_ul = statistics.mean(uploads) if uploads else 0
+    avg_ping = statistics.mean(pings) if pings else 0
+    avg_jitter = statistics.mean(jitters) if jitters else 0
+
+    final_score = calculate_health_score(avg_dl, avg_ul, avg_ping, avg_jitter)
     status = (
         "Excellent" if final_score >= 80 else
         "Good" if final_score >= 60 else
@@ -276,7 +269,7 @@ def stress_test(duration, test_type="ALL", ping_samples=5, timeout=5000):
 
 # Parse CLI arguments
 def parse_args():
-    parser = argparse.ArgumentParser(description="SpeedO v2.3 - Internet Speed & Stress Test Tool")
+    parser = argparse.ArgumentParser(description="SpeedO v2.2 - Internet Speed & Stress Test Tool")
     parser.add_argument("-S", "--stress", help="Stress mode (L/M/H/V/E/D/Y) or seconds", default=None)
     parser.add_argument("-T", "--test", help="Specific test: U (upload), D (download), P (ping)", default="ALL")
     parser.add_argument("-r", "--run", type=int, help="Auto-start after delay in seconds", default=0)
@@ -289,10 +282,12 @@ def main():
 
     args = parse_args()
 
+    # Auto-start delay
     if args.run > 0:
         print(Fore.YELLOW + f"Starting test in {args.run} seconds...")
         time.sleep(args.run)
 
+    # Determine stress duration
     stress_duration = None
     if args.stress:
         if args.stress.upper() in STRESS_MODES:
@@ -304,9 +299,11 @@ def main():
                 print(Fore.RED + "Invalid stress value. Use L/M/H/V/E/D/Y or seconds.")
                 sys.exit(1)
 
+    # Determine test type
     test_map = {"U": "U", "D": "D", "P": "P"}
     test_type = test_map.get(args.test.upper(), "ALL")
 
+    # Run stress test or single test
     if stress_duration:
         stress_test(stress_duration, test_type, args.ping, args.timeout)
     else:
@@ -316,14 +313,12 @@ def main():
             result.get("upload", 0),
             result.get("ping", 0),
             result.get("jitter", 0),
-            result.get("latency", 0),
         )
         print(Fore.GREEN + "\n=== Test Result ===")
         print(Fore.CYAN + f"Download: {result.get('download', 'N/A')} Mbps")
         print(Fore.CYAN + f"Upload:   {result.get('upload', 'N/A')} Mbps")
         print(Fore.CYAN + f"Ping:     {result.get('ping', 'N/A')} ms")
         print(Fore.CYAN + f"Jitter:   {result.get('jitter', 'N/A')} ms")
-        print(Fore.CYAN + f"Latency:  {result.get('latency', 'N/A')} ms")
         print(render_health_bar(score))
 
 if __name__ == "__main__":
