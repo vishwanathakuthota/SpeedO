@@ -73,7 +73,7 @@ Score capped between 0 and 100.
 - 40–59: Fair
 - 20–39: Poor
 - 0–19: Critical
-###### Score = 100 - (Ping penalty) - (Jitter penalty) + (Download weight) + (Upload weight)
+###### score = 100 - ping_penalty - jitter_penalty - latency_penalty + dl_score + ul_score
 
 ## License
 This project is licensed under the Custom Dr.Pinnacle License — see LICENSE for details.
